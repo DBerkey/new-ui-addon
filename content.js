@@ -5303,8 +5303,7 @@ function parseAttackLogs(html) {
       .battle-images-hidden #extension-loot-container {
         display: flex !important;
         flex-wrap: wrap !important;
-        max-width: 50% !important;
-        margin-left: auto !important;
+        max-width: 70% !important;
       }
 
       .hp-fill {
@@ -5331,8 +5330,7 @@ function parseAttackLogs(html) {
       #extension-loot-container {
         display: flex !important;
         flex-wrap: wrap !important;
-        max-width: 50% !important;
-        margin-left: auto !important;
+        max-width: 70% !important;
       }
       
       /* Add dynamic border to loot cards */
@@ -10274,6 +10272,36 @@ window.toggleSection = function(header) {
     });
   }
 
+  function buildGroupedLootCards() {
+    const map = new Map();
+
+    document.querySelectorAll('.loot-card').forEach(card => {
+      const name = card.querySelector('.loot-name')?.textContent?.trim() || '';
+
+      const chips = card.querySelectorAll('.loot-stats .chip');
+      let drop = '';
+      let dmg = '';
+      let tier = '';
+
+      chips.forEach(chip => {
+        const txt = chip.textContent.trim();
+        if (txt.startsWith('Drop:')) drop = txt;
+        if (txt.startsWith('DMG req:')) dmg = txt;
+        if (chip.classList.contains('tierchip')) tier = txt;
+      });
+
+      const key = `${name}||${drop}||${dmg}||${tier}`;
+
+      if (!map.has(key)) {
+        map.set(key, { card, count: 1 });
+      } else {
+        map.get(key).count++;
+      }
+    });
+
+    return map;
+  }
+
   function colorMyself(){
     // Don't interfere with the website's natural damage updating
     // Just let the website update #yourDamageValue automatically
@@ -10283,9 +10311,34 @@ window.toggleSection = function(header) {
           var lootContainer = document.createElement('div');
           lootContainer.id = 'extension-loot-container';
           lootContainer.style.display = 'ruby';
-          lootContainer.style.maxWidth = '50%';
+          lootContainer.style.maxWidth = '70%';
 
-          document.querySelectorAll('.loot-card').forEach(x => lootContainer.append(x));
+          const groupedLoot = buildGroupedLootCards();
+
+          groupedLoot.forEach(({ card, count }) => {
+            const clone = card.cloneNode(true);
+
+            if (count > 1) {
+              const badge = document.createElement('div');
+              badge.textContent = `${count}x`;
+              badge.style.cssText = `
+                position:absolute;
+                top:6px;
+                right:6px;
+                background:rgba(0,0,0,0.75);
+                color:#fff;
+                padding:2px 6px;
+                border-radius:8px;
+                font-size:12px;
+                font-weight:bold;
+              `;
+
+              clone.style.position = 'relative';
+              clone.appendChild(badge);
+            }
+
+            lootContainer.appendChild(clone);
+          });
 
           var enemyAndLootContainer = document.createElement('div');
           enemyAndLootContainer.id = 'extension-enemy-loot-container';
@@ -10299,7 +10352,6 @@ window.toggleSection = function(header) {
         monsterDisplay.style.alignItems = 'center';
         monsterDisplay.style.gap = '10px';
         monsterDisplay.style.flexBasis = '350px';
-        monsterDisplay.style.minWidth = '250px';
 
         const monsterImage = document.querySelector('#monsterImage');
         if (monsterImage) {
