@@ -2920,8 +2920,24 @@ function parseAttackLogs(html) {
   // Apply menu customization to the actual side drawer DOM: hide or reorder items
   function applyMenuCustomization() {
     try {
-      const sideNav = document.querySelector('.side-nav') || document.querySelector('#sideDrawer .side-nav');
-      if (!sideNav) return;
+      const sideNavList =
+        document.querySelector('.side-nav-list') ||
+        document.querySelector('.side-nav');
+      if (!sideNavList) return;
+
+      // ensure we are working with a UL (create if missing)
+      let list = sideNavList;
+      if (list.tagName !== 'UL') {
+        const ul = document.createElement('ul');
+        ul.className = 'side-nav-list';
+
+        while (list.firstChild) {
+          ul.appendChild(list.firstChild);
+        }
+
+        list.replaceWith(ul);
+        list = ul;
+      }
 
       // Helper mapping from menu id to a href snippet we can match against existing anchors
       const idToHref = {
@@ -2943,9 +2959,7 @@ function parseAttackLogs(html) {
         chat: 'chat.php'
       };
 
-      // Collect existing anchors (wraps and direct anchors)
-      const anchors = Array.from(sideNav.querySelectorAll('a.side-nav-item, .side-nav a, li.side-nav-item-wrap a'));
-
+      const anchors = Array.from(sideNav.querySelectorAll('a.side-nav-item, .side-nav a'));
       // Build a map from id -> element (if we can match), and also collect unmatched anchors
       const matched = new Map();
       const unmatched = new Set(anchors);
@@ -2995,44 +3009,27 @@ function parseAttackLogs(html) {
               next.style.display = 'none';
             }
           } else {
-            // ensure visible
             el.style.display = '';
-            // move into correct position - append to container in order
-            // We prefer placing inside a wrapper <li> if present
-            const li = el.closest('.side-nav-item-wrap') || el.closest('li') || el;
-            // Append or move the item (and its following panel if any)
-            if (li && li.parentNode === sideNav) {
-              sideNav.appendChild(li);
-              // move panel if present (next sibling)
-              const panel = li.nextElementSibling;
-              if (panel && (panel.classList.contains('stats-expand-panel') || panel.classList.contains('battlepass-expand-panel') || panel.classList.contains('battlepass-expand-panel') || panel.classList.contains('sidebar-submenu') || panel.className.includes('expand-panel'))) {
-                sideNav.appendChild(panel);
-              }
-            } else if (el.parentNode === sideNav) {
-              sideNav.appendChild(el);
-              const panel = el.nextElementSibling;
-              if (panel && (panel.classList.contains('stats-expand-panel') || panel.classList.contains('battlepass-expand-panel') || panel.classList.contains('sidebar-submenu') || panel.className.includes('expand-panel'))) {
-                sideNav.appendChild(panel);
-              }
-            } else {
-              // If the anchor is nested inside LI, move the LI; otherwise append the anchor itself
-              if (li) sideNav.appendChild(li);
-              else sideNav.appendChild(el);
-            }
           }
         } else {
           // Not found in DOM. If visible and known href, create a simple anchor element and append.
           if (item.visible && idToHref[item.id]) {
             try {
-              const wrap = document.createElement('li');
-              wrap.className = 'side-nav-item-wrap';
               const a = document.createElement('a');
               a.className = 'side-nav-item';
               a.setAttribute('href', idToHref[item.id]);
               a.setAttribute('draggable', 'false');
-              const icon = document.createElement('span'); icon.className = 'side-icon'; icon.textContent = '•';
-              const lbl = document.createElement('span'); lbl.className = 'side-label'; lbl.textContent = item.name || item.id;
-              a.appendChild(icon); a.appendChild(lbl); wrap.appendChild(a); sideNav.appendChild(wrap);
+
+              const icon = document.createElement('span');
+              icon.className = 'side-icon';
+              icon.textContent = '•';
+
+              const lbl = document.createElement('span');
+              lbl.className = 'side-label';
+              lbl.textContent = item.name || item.id;
+
+              a.append(icon, lbl);
+              list.appendChild(a);
             } catch (e) { /* ignore creation errors */ }
           }
         }
@@ -3305,8 +3302,6 @@ function parseAttackLogs(html) {
                   // Avoid duplicates by gate id in href
                   if (nav.querySelector(`a.side-nav-item[href*="gate=${g.gateId}"]`)) return;
 
-                  const li = document.createElement('li');
-                  li.className = 'side-nav-item-wrap';
                   const ael = document.createElement('a');
                   if (currentGate && String(g.gateId) === String(currentGate)) {
                     ael.className = 'side-nav-item active';
@@ -3322,8 +3317,7 @@ function parseAttackLogs(html) {
                   navName.textContent = g.name || `Gate ${g.gateId}`;
                   ael.appendChild(icon);
                   ael.appendChild(navName);
-                  li.appendChild(ael);
-                  nav.appendChild(li);
+                  nav.appendChild(ael);
                 } catch (e) {
                   console.error('Error inserting gate into sidebar:', e);
                 }
@@ -3334,8 +3328,6 @@ function parseAttackLogs(html) {
           }
           // Add leaderboard link
           if (!sidebarContent.querySelector('a.side-nav-item[href="weekly.php"]')) {
-            const li = document.createElement('li');
-            li.className = 'side-nav-item-wrap';
             const ael = document.createElement('a');
             const current = window.location.pathname;
             if (current.endsWith('/weekly.php' ) || current === '/weekly.php') {
@@ -3352,8 +3344,7 @@ function parseAttackLogs(html) {
             navName.textContent = 'Weekly Leaderboard';
             ael.appendChild(icon);
             ael.appendChild(navName);
-            li.appendChild(ael);
-            sidebarContent.appendChild(li);
+            sidebarContent.appendChild(ael);
           }
           // Loop over every side-nav-item link and inspect its href
           const items = Array.from(sidebarContent.querySelectorAll('a.side-nav-item, .side-nav a'));
