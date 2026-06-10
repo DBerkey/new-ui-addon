@@ -3159,8 +3159,8 @@ function parseAttackLogs(html) {
     // Ensure the side drawer is opened by default
     try { sidebar.setAttribute('data-open', 'true'); } catch (e) { /* ignore if not possible */ }
 
-    sidebar.style.marginTop = '66px';
-    sidebar.style.maxHeight = 'calc(100% - 66px)';
+    sidebar.style.marginTop = '55px';
+    sidebar.style.maxHeight = 'calc(100% - 55px)';
     sidebar.style.width = '250px';
     
 
