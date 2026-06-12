@@ -11614,6 +11614,29 @@ function fixMonsterLayout() {
       }
     });
 
+    const activePlayers = document.querySelector('.active-players-today');
+    if (activePlayers) {
+      activePlayers.remove();
+    }
+
+    const gemsShop = document.querySelector('.ny-gems-shop');
+    if (gemsShop) {
+      gemsShop.remove();
+    }
+
+    const gateLinks = document.querySelectorAll('.gate-link');
+    for (const gateLink of gateLinks) {
+      if (gateLink.href && gateLink.href.includes('chat.php')) {
+        gateLink.remove();
+      } else if (gateLink.href && gateLink.href.includes('patches.php')) {
+        gateLink.remove();
+      } else if (gateLink.href && gateLink.href.includes('index.php')) {
+        gateLink.remove();
+      } else if (gateLink.href && gateLink.href.includes('guide.php')) {
+        gateLink.remove();
+      }
+    }
+
     // Remove "How to Play" section
     const howtoInfo = document.querySelector('.howto-info');
     if (howtoInfo) {
