@@ -11600,9 +11600,482 @@ function fixMonsterLayout() {
   function initPvPBattleMods(){
   }
 
-  function initDashboardTools() {
+  function getBossTracker() {
+    'use strict';
+
+    // State populated dynamically from config.json
+    let CONFIG = {
+      BOSS_PAGES: [],
+      SPAWN_LEAD_MS: 10000,
+      MIN_REFRESH_MS: 30000,
+      FALLBACK_REFRESH_MS: 300000,
+      TICK_INTERVAL_MS: 1000
+    };
+
+    let _refreshTimer = null;
+    let sections = [];
+    let collapsed = false;
+    let lastUpdated = null;
+
+    // STYLES
+    const STYLES = `
+      @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@300;400;600&display=swap');
+      #bt-panel {
+        --bt-bg: #111118; --bt-surface: #18181f; --bt-surface2: #1e1e28;
+        --bt-border: #2a2a38; --bt-border-hi: #3a3a50;
+        --bt-gold: #e8b84b; --bt-gold-dim: #8a6a20; --bt-gold-glow: rgba(232,184,75,0.18);
+        --bt-alive: #2ecc71; --bt-alive-glow: rgba(46,204,113,0.2);
+        --bt-waiting: #7b9fff; --bt-red: #e74c3c;
+        --bt-text: #e8e8f0; --bt-muted: #666680;
+        --bt-radius: 12px; --bt-radius-sm: 8px;
+        font-family: 'Exo 2', sans-serif; background: var(--bt-bg);
+        border: 1px solid var(--bt-border); border-radius: var(--bt-radius);
+      }
+      #bt-panel * { box-sizing: border-box; }
+      #bt-title { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: 0.1em; color: var(--bt-gold); text-transform: uppercase; }
+      #bt-live-pill { background: var(--bt-red); color: #fff; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.12em; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; animation: bt-pulse-red 2s ease-in-out infinite; }
+      #bt-subtitle { font-size: 12px; color: var(--bt-muted); font-weight: 300; }
+      #bt-toggle-btn { background: transparent; border: 1px solid var(--bt-border-hi); color: var(--bt-muted); border-radius: var(--bt-radius-sm); padding: 4px 12px; font-size: 12px; font-family: 'Exo 2', sans-serif; font-weight: 600; cursor: pointer; letter-spacing: 0.05em; text-transform: uppercase; transition: color 0.2s, border-color 0.2s, background 0.2s; }
+      #bt-toggle-btn:hover { color: var(--bt-gold); border-color: var(--bt-gold-dim); background: var(--bt-gold-glow); }
+      #bt-body { padding: 14px 16px 16px; }
+      #bt-body.bt-collapsed { display: none; }
+      .bt-loading, .bt-error { text-align: center; padding: 28px; color: var(--bt-muted); font-size: 14px; font-style: italic; }
+      .bt-error { color: var(--bt-red); }
+      .bt-section-wrap { margin-bottom: 14px; }
+      .bt-section-wrap:last-child { margin-bottom: 0; }
+      .bt-section-label { display: flex; align-items: center; gap: 10px; font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 0.16em; color: var(--bt-gold); text-transform: uppercase; margin-bottom: 8px; opacity: 0.85; }
+      .bt-section-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--bt-border-hi) 0%, transparent 100%); }
+      .bt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+      .bt-card { background: var(--bt-surface); border: 1px solid var(--bt-border); border-radius: var(--bt-radius-sm); overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s; animation: bt-fade-in 0.35s ease both; position: relative; }
+      .bt-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; opacity: 0; transition: opacity 0.2s; }
+      .bt-card.bt-alive::before { background: var(--bt-alive); opacity: 1; }
+      .bt-card.bt-waiting::before { background: var(--bt-border-hi); opacity: 1; }
+      .bt-card:hover { border-color: var(--bt-border-hi); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+      .bt-card.bt-alive:hover { border-color: rgba(46,204,113,0.4); box-shadow: 0 6px 24px var(--bt-alive-glow); }
+      .bt-phase-badge { display: inline-flex; align-items: center; gap: 3px; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; margin-top: 3px; }
+      .bt-phase-badge.bt-p1 { background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.35); color: #2ecc71; }
+      .bt-phase-badge.bt-p2 { background: rgba(192,112,255,0.12); border: 1px solid rgba(192,112,255,0.4); color: #c070ff; }
+      .bt-phase-badge.bt-p3 { background: rgba(232,184,75,0.15); border: 1px solid rgba(232,184,75,0.4); color: var(--bt-gold); }
+      .bt-card.bt-phase2 { border-color: rgba(192,112,255,0.5) !important; box-shadow: 0 0 0 1px rgba(192,112,255,0.15), 0 0 18px rgba(192,112,255,0.22); animation: bt-fade-in 0.35s ease both, bt-p2-pulse 3s ease-in-out infinite; }
+      .bt-card.bt-phase2::before { background: #c070ff !important; opacity: 1 !important; }
+      .bt-card.bt-phase2:hover { border-color: rgba(192,112,255,0.85) !important; box-shadow: 0 0 0 1px rgba(192,112,255,0.4), 0 0 28px rgba(192,112,255,0.35); }
+      .bt-card.bt-phase3 { border-color: rgba(232,184,75,0.5) !important; box-shadow: 0 0 0 1px rgba(232,184,75,0.2), 0 0 18px rgba(232,184,75,0.25); animation: bt-fade-in 0.35s ease both, bt-p3-pulse 3s ease-in-out infinite; }
+      .bt-card.bt-phase3::before { background: var(--bt-gold) !important; opacity: 1 !important; }
+      .bt-card.bt-phase3:hover { border-color: rgba(232,184,75,0.85) !important; box-shadow: 0 0 0 1px rgba(232,184,75,0.4), 0 0 32px rgba(232,184,75,0.4); }
+      @keyframes bt-p2-pulse { 0%, 100% { box-shadow: 0 0 0 1px rgba(192,112,255,0.15), 0 0 18px rgba(192,112,255,0.22); } 50% { box-shadow: 0 0 0 1px rgba(192,112,255,0.3),  0 0 28px rgba(192,112,255,0.35); } }
+      @keyframes bt-p3-pulse { 0%, 100% { box-shadow: 0 0 0 1px rgba(232,184,75,0.2), 0 0 18px rgba(232,184,75,0.25); } 50% { box-shadow: 0 0 0 1px rgba(232,184,75,0.35), 0 0 28px rgba(232,184,75,0.4); } }
+      .bt-card-inner { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+      .bt-boss-img { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: #0a0a12; display: block; }
+      .bt-boss-img-placeholder { width: 52px; height: 52px; border-radius: 6px; background: #0a0a12; border: 1px solid var(--bt-border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+      .bt-img-link { position: relative; display: block; flex-shrink: 0; border-radius: 6px; overflow: hidden; text-decoration: none; outline: none; }
+      .bt-img-link::after { content: '⚔'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,10,18,0.78); color: var(--bt-gold); font-size: 22px; opacity: 0; transition: opacity 0.16s; }
+      .bt-img-link:hover::after { opacity: 1; }
+      .bt-img-link:hover .bt-boss-img { filter: brightness(0.5); }
+      .bt-boss-img { transition: filter 0.16s; }
+      .bt-boss-info { flex: 1; min-width: 0; }
+      .bt-boss-name { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 13px; color: var(--bt-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; letter-spacing: 0.02em; }
+      .bt-boss-cycle { font-size: 11px; color: var(--bt-muted); margin-top: 3px; font-weight: 300; }
+      .bt-dmg-chip { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; background: rgba(180,60,60,0.13); border: 1px solid rgba(220,80,80,0.28); color: #e07070; font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 11px; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+      .bt-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+      .bt-badge-alive { display: inline-flex; align-items: center; gap: 4px; background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.35); color: var(--bt-alive); font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; }
+      .bt-badge-alive::before { content: ''; width: 6px; height: 6px; background: var(--bt-alive); border-radius: 50%; animation: bt-pulse-green 1.8s ease-in-out infinite; }
+      .bt-countdown { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 14px; color: var(--bt-waiting); letter-spacing: 0.04em; text-align: right; }
+      .bt-countdown-label { font-size: 10px; color: var(--bt-muted); font-weight: 300; text-align: right; letter-spacing: 0.06em; text-transform: uppercase; }
+      #bt-footer { display: flex; align-items: center; justify-content: space-between; padding: 7px 18px; border-top: 1px solid var(--bt-border); background: #0d0d14; }
+      #bt-last-updated { font-size: 11px; color: var(--bt-muted); font-weight: 300; }
+      #bt-refresh-btn { background: transparent; border: 1px solid var(--bt-border-hi); color: var(--bt-muted); border-radius: 6px; padding: 3px 12px; font-size: 11px; font-family: 'Exo 2', sans-serif; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; }
+      #bt-refresh-btn:hover { color: var(--bt-gold); border-color: var(--bt-gold-dim); background: var(--bt-gold-glow); }
+      #bt-refresh-btn:disabled { opacity: 0.35; cursor: default; }
+      @keyframes bt-fade-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes bt-spin { to { transform: rotate(360deg); } }
+      @keyframes bt-pulse-green { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(46,204,113,0.5); } 50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(46,204,113,0); } }
+      @keyframes bt-pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+      .bt-spinning { display: inline-block; animation: bt-spin 0.75s linear infinite; }
+    `;
+
+    // HELPERS
+    function injectStyle(css) {
+      const el = document.createElement('style');
+      el.textContent = css;
+      document.head.appendChild(el);
+    }
+
+    function fmtCountdown(secondsLeft) {
+      if (secondsLeft <= 0) return '0s';
+      const h = Math.floor(secondsLeft / 3600);
+      const m = Math.floor((secondsLeft % 3600) / 60);
+      const s = secondsLeft % 60;
+      if (h > 0) return `${h}h ${m}m ${s}s`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    }
+
+    function fmtDmg(n) {
+      if (!n || n === 0) return null;
+      if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + 'B';
+      if (n >= 1_000_000)     return (n / 1_000_000).toFixed(1) + 'M';
+      if (n >= 1_000)         return (n / 1_000).toFixed(1) + 'K';
+      return n.toString();
+    }
+
+    // Cookie Utilities
+    function setGameCookie(name, value) {
+      document.cookie = `${name}=${encodeURIComponent(value)}; Max-Age=${24*60*60}; Path=/; SameSite=Lax`;
+    }
+
+    function readGameCookie(name) {
+      const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return m ? decodeURIComponent(m.pop()) : null;
+    }
+
+    async function gmFetch(url) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch(url, { method: 'GET', headers: { 'Accept': 'text/html' }, signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP Error! Status: ${response.status}`);
+        return await response.text();
+      } catch (e) {
+        clearTimeout(timeoutId); throw e;
+      }
+    }
+
+    function normName(s) { return (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim(); }
+
+    const BOSS_PHASE_ALIASES = {
+      'hermes divine herald of the endless road': ['hermes fleet duelist of the crossroads'],
+      'artemis divine huntress of the moonlit wilds': ['artemis lunar duelist of the sacred hunt'],
+    };
+
+    function parseBossCards(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const cards = doc.querySelectorAll('.auto-summon-card');
+      const results = [];
+      const monsterMap = {};
+
+      doc.querySelectorAll('.monster-card').forEach(mc => {
+        const mid = mc.getAttribute('data-monster-id');
+        if (!mid) return;
+        const norm = normName(mc.getAttribute('data-name'));
+        if (!norm) return;
+        const dmg = parseInt(mc.getAttribute('data-userdmg') || '0', 10);
+        if (!monsterMap[norm] || parseInt(mid) > parseInt(monsterMap[norm].id)) {
+          monsterMap[norm] = { id: mid, dmg };
+        }
+      });
+
+      cards.forEach(card => {
+        const alive  = card.getAttribute('data-alive') === '1';
+        const nextTs = parseInt(card.getAttribute('data-next-ts') || '0', 10);
+        const name   = card.querySelector('.auto-summon-name')?.textContent.trim() || 'Unknown';
+        const sub    = card.querySelector('.auto-summon-sub')?.innerHTML.trim() || '';
+        const imgSrc = card.querySelector('.auto-summon-img')?.getAttribute('src') || null;
+
+        let battleUrl = null;
+        let userDmg   = 0;
+
+        if (alive) {
+          const norm = normName(name);
+          const entry = monsterMap[norm];
+
+          if (entry) {
+            battleUrl = `https://demonicscans.org/battle.php?id=${entry.id}`;
+            userDmg   = entry.dmg;
+          } else {
+            const aliases = BOSS_PHASE_ALIASES[norm] || [];
+            let aliasEntry = null;
+            for (const alias of aliases) {
+              if (monsterMap[alias]) { aliasEntry = monsterMap[alias]; break; }
+            }
+            if (aliasEntry) {
+              battleUrl = `https://demonicscans.org/battle.php?id=${aliasEntry.id}`;
+              userDmg   = aliasEntry.dmg;
+            } else {
+              const words = norm.split(' ').filter(w => w.length > 2);
+              const fuzzy = Object.entries(monsterMap).find(([k]) => words.every(w => k.includes(w)));
+              if (fuzzy) {
+                battleUrl = `https://demonicscans.org/battle.php?id=${fuzzy[1].id}`;
+                userDmg   = fuzzy[1].dmg;
+              }
+            }
+          }
+        }
+
+        const isPhaseBoss = /^(hermes|artemis)[,\s]/i.test(name.trim());
+        let autodieSecs = 0;
+        const autodieMatch = sub.match(/Auto-die[^<]*<b[^>]*>\s*([\d.]+)h\s*<\/b>/i);
+        if (autodieMatch) autodieSecs = parseFloat(autodieMatch[1]) * 3600;
+
+        const now = Math.floor(Date.now() / 1000);
+        const timeLeft = alive ? Math.max(0, nextTs - now) : 0;
+        let phase = null;
+
+        if (alive && isPhaseBoss) {
+          phase = timeLeft > autodieSecs ? 'p1' : 'p2';
+        }
+
+        let pvpUrl = null;
+        if (isPhaseBoss && phase === 'p2') {
+          const pvpMatch = doc.body.innerHTML.match(/pvp_style_battle\.php\?source=monster_phase&(?:amp;)?active_id=(\d+)/);
+          if (pvpMatch) {
+            pvpUrl = `https://demonicscans.org/pvp_style_battle.php?source=monster_phase&active_id=${pvpMatch[1]}`;
+          } else {
+            phase = 'p3';
+          }
+        }
+
+        if (pvpUrl) battleUrl = pvpUrl;
+        results.push({ alive, nextTs, name, sub, imgSrc, battleUrl, userDmg, phase, isPhaseBoss, autodieSecs });
+      });
+      return results;
+    }
+
+    function buildPanel() {
+      const panel = document.createElement('div');
+      panel.id = 'bt-panel';
+      panel.innerHTML = `
+        <div id="bt-body">
+          <div class="bt-loading">⏳ Fetching boss data…</div>
+        </div>
+        <div id="bt-footer">
+          <span id="bt-last-updated">Never refreshed</span>
+          <span id="bt-next-refresh" style="font-size:11px;color:var(--bt-muted);font-weight:300;"></span>
+          <button id="bt-refresh-btn">↻ Refresh</button>
+        </div>
+      `;
+
+      panel.querySelector('#bt-refresh-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        loadAllPages();
+      });
+
+      return panel;
+    }
+
+    function buildCardHTML(boss, i) {
+      let stateClass = boss.alive ? 'bt-alive' : 'bt-waiting';
+      if (boss.alive && boss.phase === 'p2') stateClass += ' bt-phase2';
+      if (boss.alive && boss.phase === 'p3') stateClass += ' bt-phase3';
+      const imgUrl = boss.imgSrc ? (boss.imgSrc.startsWith('/') ? `https://demonicscans.org${boss.imgSrc}` : `https://demonicscans.org/${boss.imgSrc}`) : null;
+      const imgEl = imgUrl ? `<img class="bt-boss-img" src="${imgUrl}" alt="">` : `<div class="bt-boss-img-placeholder">👾</div>`;
+      const imgTag = (boss.alive && boss.battleUrl) ? `<a class="bt-img-link" href="${boss.battleUrl}" title="Go to battle: ${boss.name}" target="_self">${imgEl}</a>` : imgEl;
+      const statusHtml = boss.alive ? `<div class="bt-card-right"><span class="bt-badge-alive">Alive</span></div>` : `<div class="bt-card-right"><span class="bt-countdown" data-ts="${boss.nextTs}">…</span><span class="bt-countdown-label">Spawns in</span></div>`;
+      const dmgHtml = boss.userDmg > 0 ? `<span class="bt-dmg-chip">🩸 ${fmtDmg(boss.userDmg)}</span>` : '';
+      const phaseHtml = boss.isPhaseBoss && boss.alive && boss.phase ? `<span class="bt-phase-badge bt-${boss.phase}">${boss.phase === 'p1' ? '● Phase 1' : boss.phase === 'p2' ? '⚔ Phase 2 — Duel' : '✦ Phase 3 — Ascended'}</span>` : '';
+      return `<div class="bt-card ${stateClass}" data-bt-key="${boss.name.replace(/"/g, '&quot;')}" style="animation-delay:${i * 0.06}s"><div class="bt-card-inner">${imgTag}<div class="bt-boss-info"><div class="bt-boss-name" title="${boss.name}">${boss.name}</div><div class="bt-boss-cycle">${boss.sub.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')}</div>${phaseHtml}${dmgHtml}</div>${statusHtml}</div></div>`;
+    }
+
+    function patchCard(cardEl, boss) {
+      const nowAlive = boss.alive;
+      const wasAlive = cardEl.classList.contains('bt-alive');
+      if (nowAlive !== wasAlive) { cardEl.classList.toggle('bt-alive', nowAlive); cardEl.classList.toggle('bt-waiting', !nowAlive); }
+      cardEl.classList.toggle('bt-phase2', nowAlive && boss.phase === 'p2');
+      cardEl.classList.toggle('bt-phase3', nowAlive && boss.phase === 'p3');
+
+      const infoEl = cardEl.querySelector('.bt-boss-info');
+      if (infoEl) {
+        let pBadge = infoEl.querySelector('.bt-phase-badge');
+        if (boss.isPhaseBoss && nowAlive && boss.phase) {
+          const label = boss.phase === 'p1' ? '● Phase 1' : boss.phase === 'p2' ? '⚔ Phase 2 — Duel' : '✦ Phase 3 — Ascended';
+          if (!pBadge) { pBadge = document.createElement('span'); pBadge.className = `bt-phase-badge bt-${boss.phase}`; const cycleEl = infoEl.querySelector('.bt-boss-cycle'); if (cycleEl) cycleEl.insertAdjacentElement('afterend', pBadge); else infoEl.prepend(pBadge); }
+          pBadge.className = `bt-phase-badge bt-${boss.phase}`; pBadge.textContent = label;
+        } else if (pBadge) { pBadge.remove(); }
+      }
+
+      const linkEl = cardEl.querySelector('.bt-img-link');
+      const imgEl  = cardEl.querySelector('.bt-boss-img, .bt-boss-img-placeholder');
+      if (nowAlive && boss.battleUrl) {
+        if (!linkEl && imgEl) { const a = document.createElement('a'); a.className = 'bt-img-link'; a.href = boss.battleUrl; a.title = `Go to battle: ${boss.name}`; a.target = '_self'; imgEl.parentNode.insertBefore(a, imgEl); a.appendChild(imgEl); } 
+        else if (linkEl) { linkEl.href = boss.battleUrl; }
+      } else {
+        if (linkEl && imgEl) { linkEl.parentNode.insertBefore(imgEl, linkEl); linkEl.remove(); }
+      }
+
+      const right = cardEl.querySelector('.bt-card-right');
+      if (right) {
+        if (nowAlive) { if (!right.querySelector('.bt-badge-alive')) { right.innerHTML = `<span class="bt-badge-alive">Alive</span>`; } } 
+        else { let cd = right.querySelector('.bt-countdown'); if (!cd) { right.innerHTML = `<span class="bt-countdown" data-ts="${boss.nextTs}">…</span><span class="bt-countdown-label">Spawns in</span>`; } else { cd.setAttribute('data-ts', boss.nextTs); } }
+      }
+
+      let dmgChip = cardEl.querySelector('.bt-dmg-chip');
+      if (boss.userDmg > 0) {
+        if (!dmgChip) { dmgChip = document.createElement('span'); dmgChip.className = 'bt-dmg-chip'; const info = cardEl.querySelector('.bt-boss-info'); if (info) info.appendChild(dmgChip); }
+        dmgChip.textContent = `🩸 ${fmtDmg(boss.userDmg)}`;
+      } else if (dmgChip) { dmgChip.remove(); }
+    }
+
+    function renderBody() {
+      const body = document.querySelector('#bt-body');
+      if (!body) return;
+      if (!sections.length) { body.innerHTML = `<div class="bt-error">⚠ No boss data found. Check the JSON config file.</div>`; return; }
+
+      const totalAlive = sections.flatMap(s => s.bosses).filter(b => b.alive).length;
+      const totalBosses = sections.flatMap(s => s.bosses).length;
+      const subtitle = document.querySelector('#bt-subtitle');
+      if (subtitle) subtitle.textContent = `${totalAlive} alive · ${totalBosses} total`;
+
+      const isFirstPaint = !body.querySelector('.bt-section-wrap');
+      if (isFirstPaint) {
+        let html = '';
+        sections.forEach(({ label, bosses }) => {
+          html += `<div class="bt-section-wrap"><div class="bt-section-label">${label}</div><div class="bt-grid">`;
+          bosses.forEach((boss, i) => { html += buildCardHTML(boss, i); });
+          html += '</div></div>';
+        });
+        body.innerHTML = html;
+        tickCountdowns(); return;
+      }
+
+      sections.forEach(({ label, bosses }) => {
+        const allLabels = body.querySelectorAll('.bt-section-label');
+        let grid = null;
+        allLabels.forEach(el => { if (el.textContent.trim() === label) { grid = el.parentElement.querySelector('.bt-grid'); } });
+        if (!grid) return;
+
+        bosses.forEach((boss, i) => {
+          const safeKey = boss.name.replace(/"/g, "&quot;");
+          const cardEl = grid.querySelector(`[data-bt-key="${safeKey}"]`);
+          if (cardEl) patchCard(cardEl, boss); else grid.insertAdjacentHTML('beforeend', buildCardHTML(boss, i));
+        });
+      });
+      tickCountdowns();
+    }
+
+    function tickCountdowns() {
+      const now = Math.floor(Date.now() / 1000);
+      document.querySelectorAll('.bt-countdown[data-ts]').forEach(el => {
+        const ts = parseInt(el.getAttribute('data-ts'), 10);
+        const diff = ts - now;
+        if (diff <= 0) { el.textContent = '⚡ Spawning!'; el.style.color = '#ffcf5c'; } 
+        else { el.textContent = fmtCountdown(diff); }
+      });
+    }
+
+    function scheduleNextRefresh() {
+      if (_refreshTimer) clearTimeout(_refreshTimer);
+      const now = Math.floor(Date.now() / 1000);
+      const candidates = [];
+
+      sections.flatMap(s => s.bosses).forEach(b => {
+        if (!b.nextTs || b.nextTs <= now) return;
+        if (!b.alive) { candidates.push(b.nextTs); } 
+        else if (b.isPhaseBoss && b.phase === 'p1') {
+          const p2TransitionTs = b.nextTs - (24 * 3600);
+          if (p2TransitionTs > now) candidates.push(p2TransitionTs);
+        }
+      });
+
+      let delayMs;
+      if (candidates.length) {
+        const soonestTs = Math.min(...candidates);
+        delayMs = Math.max(((soonestTs - now) * 1000) - CONFIG.SPAWN_LEAD_MS, CONFIG.MIN_REFRESH_MS);
+      } else {
+        delayMs = CONFIG.FALLBACK_REFRESH_MS;
+      }
+
+      const nextIn = document.querySelector('#bt-next-refresh');
+      if (nextIn) nextIn.textContent = `Next fetch in ~${Math.round(delayMs / 60_000)}m`;
+      _refreshTimer = setTimeout(loadAllPages, delayMs);
+    }
+
+    async function loadAllPages() {
+      const refreshBtn = document.querySelector('#bt-refresh-btn');
+      const subtitle = document.querySelector('#bt-subtitle');
+      if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.innerHTML = '<span class="bt-spinning">↻</span> Refreshing…'; }
+      if (subtitle) subtitle.textContent = 'Refreshing…';
+
+      const prevCookie = readGameCookie('hide_dead_monsters');
+      const needsFlip = prevCookie !== '1';
+      if (needsFlip) setGameCookie('hide_dead_monsters', '1');
+
+      let results;
+      try {
+        if (!CONFIG.BOSS_PAGES || !CONFIG.BOSS_PAGES.length) {
+          throw new Error("No pages configured.");
+        }
+        results = await Promise.allSettled(CONFIG.BOSS_PAGES.map(p => gmFetch(p.url)));
+      } catch(err) {
+        console.warn("Tracker paint aborted: ", err.message);
+        const body = document.querySelector('#bt-body');
+        if (body) body.innerHTML = `<div class="bt-error">⚠ Tracker structural settings failed to resolve.</div>`;
+        return;
+      } finally {
+        if (needsFlip) { if (prevCookie !== null) { setGameCookie('hide_dead_monsters', prevCookie); } else { document.cookie = 'hide_dead_monsters=; Max-Age=0; Path=/; SameSite=Lax'; } }
+      }
+
+      sections = [];
+      results.forEach((result, idx) => {
+        const page = CONFIG.BOSS_PAGES[idx];
+        if (result.status === 'fulfilled') { sections.push({ label: page.label, bosses: parseBossCards(result.value) }); } 
+        else { sections.push({ label: page.label, bosses: [], error: true }); }
+      });
+
+      lastUpdated = new Date();
+      const el = document.querySelector('#bt-last-updated');
+      if (el) el.textContent = `Updated: ${lastUpdated.toLocaleTimeString()}`;
+      if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '↻ Refresh'; }
+
+      renderBody();
+      scheduleNextRefresh();
+    }
+
+    // EXPOSE PUBLIC METHODS
+    return {
+      init: async function () {
+        if (document.getElementById('bt-panel')) return;
+
+        try {
+          const hasRuntime = typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function';
+          const hasBrowser = typeof browser !== 'undefined' && browser.runtime && typeof browser.runtime.getURL === 'function';
+          
+          let configUrl;
+          if (hasRuntime) {
+            configUrl = chrome.runtime.getURL('config.json');
+          } else if (hasBrowser) {
+            configUrl = browser.runtime.getURL('config.json');
+          } else {
+            configUrl = './config.json'; 
+          }
+          
+          const response = await fetch(configUrl);
+          const downloadedConfig = await response.json();
+          CONFIG = Object.assign({}, CONFIG, downloadedConfig);
+        } catch (error) {
+          console.error("Failed to load BossTracker config.json:", error);
+        }
+
+        injectStyle(STYLES);
+
+        const target =
+          document.querySelector('.game-content') ||
+          document.querySelector('.dashboard') ||
+          document.querySelector('.content-wrapper') ||
+          document.querySelector('main') ||
+          document.querySelector('.container') ||
+          document.body.firstElementChild;
+
+        const panel = buildPanel();
+
+        if (target && target !== document.body.firstElementChild) {
+          target.insertAdjacentElement('afterbegin', panel);
+        } else {
+          document.body.insertAdjacentElement('afterbegin', panel);
+        }
+
+        loadAllPages();
+        setInterval(tickCountdowns, CONFIG.TICK_INTERVAL_MS || 1000);
+      }
+    };
+  }
+
+  async function initDashboardTools() {
     console.log("Initializing dashboard tools");
     removeDashboardClutter();
+
+    const BossTracker = getBossTracker();
+    await BossTracker.init();
   }
 
   function removeDashboardClutter() {
