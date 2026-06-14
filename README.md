@@ -1,15 +1,17 @@
-## 📝 Quick Summary
+## UI addon veyra (chromium only)
 
-**Demon Game Enhancement Extension** - Advanced browser addon featuring multi-criteria monster filtering, sidebar quick access for inventory/merchant items, real-time stats management, instant battle actions, customizable themes, and cross-page automation.
+**Demon Game Enhancement Extension** - browser addon for the veyra game, based on earlier work by asura-cr and me see [here](https://github.com/DBerkey/ui-addon). Now dummed down so it better fits the current state of the game. 
 
-### 📱 Enhanced Sidebar Navigation
+
+### Sidebar Navigation
 - **Real-time Stats Display**: Live attack, defense, stamina, and stat points
 - **Quick Stat Allocation**: +1/+5 buttons for instant stat upgrades
-- **Expandable Sections**: Collapsible pets, blacksmith, merchant, inventory sections
-- **Customizable Colors**: 12 sidebar colors and 12 background themes
+
+### Boss trackers
+- **customizable through the config**
 
 ### More options are availible and in progress
 
 ## Instalation
 
-load the folder containg the content and manifest in the browser as extension 
+- Go to the [latest release](https://github.com/DBerkey/new-ui-addon/releases) and install it through un zipping it and loading it in to your browser
