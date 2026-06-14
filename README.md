@@ -16,3 +16,6 @@
 ## Instalation
 
 - Go to the [latest release](https://github.com/DBerkey/new-ui-addon/releases) and install it through un zipping it and loading it in to your browser
+
+## AI usage
+For this project GitHub copilot was used for in line code sugestions and for the generation of documentation
