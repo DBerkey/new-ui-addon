@@ -11741,10 +11741,7 @@ function fixMonsterLayout() {
 
     function normName(s) { return (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim(); }
 
-    const BOSS_PHASE_ALIASES = {
-      'hermes divine herald of the endless road': ['hermes fleet duelist of the crossroads'],
-      'artemis divine huntress of the moonlit wilds': ['artemis lunar duelist of the sacred hunt'],
-    };
+    const BOSS_PHASE_ALIASES = CONFIG.BOSS_PHASE_ALIASES || {};
 
     function parseBossCards(html) {
       const parser = new DOMParser();
