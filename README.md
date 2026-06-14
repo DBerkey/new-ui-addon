@@ -1,4 +1,4 @@
-![banner](https://github.com/DBerkey/new-ui-addon/blob/main/banner.png)
+![banner](https://github.com/DBerkey/new-ui-addon/blob/main/Images/banner.png)
 ## UI addon veyra (chromium only)
 
 **Demon Game Enhancement Extension** - browser addon for the veyra game, based on earlier work by asura-cr and me see [here](https://github.com/DBerkey/ui-addon). Now dummed down so it better fits the current state of the game. 
