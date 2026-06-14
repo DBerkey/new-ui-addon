@@ -11628,8 +11628,7 @@ function fixMonsterLayout() {
         --bt-waiting: #7b9fff; --bt-red: #e74c3c;
         --bt-text: #e8e8f0; --bt-muted: #666680;
         --bt-radius: 12px; --bt-radius-sm: 8px;
-        font-family: 'Exo 2', sans-serif; background: var(--bt-bg);
-        border: 1px solid var(--bt-border); border-radius: var(--bt-radius);
+        font-family: 'Exo 2', sans-serif;
       }
       #bt-panel * { box-sizing: border-box; }
       #bt-title { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: 0.1em; color: var(--bt-gold); text-transform: uppercase; }
@@ -11637,7 +11636,6 @@ function fixMonsterLayout() {
       #bt-subtitle { font-size: 12px; color: var(--bt-muted); font-weight: 300; }
       #bt-toggle-btn { background: transparent; border: 1px solid var(--bt-border-hi); color: var(--bt-muted); border-radius: var(--bt-radius-sm); padding: 4px 12px; font-size: 12px; font-family: 'Exo 2', sans-serif; font-weight: 600; cursor: pointer; letter-spacing: 0.05em; text-transform: uppercase; transition: color 0.2s, border-color 0.2s, background 0.2s; }
       #bt-toggle-btn:hover { color: var(--bt-gold); border-color: var(--bt-gold-dim); background: var(--bt-gold-glow); }
-      #bt-body { padding: 14px 16px 16px; }
       #bt-body.bt-collapsed { display: none; }
       .bt-loading, .bt-error { text-align: center; padding: 28px; color: var(--bt-muted); font-size: 14px; font-style: italic; }
       .bt-error { color: var(--bt-red); }
@@ -11648,8 +11646,8 @@ function fixMonsterLayout() {
       .bt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
       .bt-card { background: var(--bt-surface); border: 1px solid var(--bt-border); border-radius: var(--bt-radius-sm); overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s; animation: bt-fade-in 0.35s ease both; position: relative; }
       .bt-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; opacity: 0; transition: opacity 0.2s; }
-      .bt-card.bt-alive::before { background: var(--bt-alive); opacity: 1; }
-      .bt-card.bt-waiting::before { background: var(--bt-border-hi); opacity: 1; }
+      .bt-card.bt-alive::before { background: var(--bt-alive); opacity: 1; z-index: 100; }
+      .bt-card.bt-waiting::before { background: var(--bt-border-hi); opacity: 1; z-index: 100; }
       .bt-card:hover { border-color: var(--bt-border-hi); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
       .bt-card.bt-alive:hover { border-color: rgba(46,204,113,0.4); box-shadow: 0 6px 24px var(--bt-alive-glow); }
       .bt-phase-badge { display: inline-flex; align-items: center; gap: 3px; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; margin-top: 3px; }
@@ -11660,28 +11658,28 @@ function fixMonsterLayout() {
       .bt-card.bt-phase2::before { background: #c070ff !important; opacity: 1 !important; }
       .bt-card.bt-phase2:hover { border-color: rgba(192,112,255,0.85) !important; box-shadow: 0 0 0 1px rgba(192,112,255,0.4), 0 0 28px rgba(192,112,255,0.35); }
       .bt-card.bt-phase3 { border-color: rgba(232,184,75,0.5) !important; box-shadow: 0 0 0 1px rgba(232,184,75,0.2), 0 0 18px rgba(232,184,75,0.25); animation: bt-fade-in 0.35s ease both, bt-p3-pulse 3s ease-in-out infinite; }
-      .bt-card.bt-phase3::before { background: var(--bt-gold) !important; opacity: 1 !important; }
+      .bt-card.bt-phase3::before { background: var(--bt-gold) !important; opacity: 1 !important; z-index: 101; }
       .bt-card.bt-phase3:hover { border-color: rgba(232,184,75,0.85) !important; box-shadow: 0 0 0 1px rgba(232,184,75,0.4), 0 0 32px rgba(232,184,75,0.4); }
       @keyframes bt-p2-pulse { 0%, 100% { box-shadow: 0 0 0 1px rgba(192,112,255,0.15), 0 0 18px rgba(192,112,255,0.22); } 50% { box-shadow: 0 0 0 1px rgba(192,112,255,0.3),  0 0 28px rgba(192,112,255,0.35); } }
       @keyframes bt-p3-pulse { 0%, 100% { box-shadow: 0 0 0 1px rgba(232,184,75,0.2), 0 0 18px rgba(232,184,75,0.25); } 50% { box-shadow: 0 0 0 1px rgba(232,184,75,0.35), 0 0 28px rgba(232,184,75,0.4); } }
-      .bt-card-inner { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+      .bt-card-inner { display: flex; align-items: center; gap: 10px; padding-right: 12px; }
       .bt-boss-img { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: #0a0a12; display: block; }
       .bt-boss-img-placeholder { width: 52px; height: 52px; border-radius: 6px; background: #0a0a12; border: 1px solid var(--bt-border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-      .bt-img-link { position: relative; display: block; flex-shrink: 0; border-radius: 6px; overflow: hidden; text-decoration: none; outline: none; }
+      .bt-img-link { display: block; flex-shrink: 0; border-radius: 6px; overflow: hidden; text-decoration: none; outline: none; }
       .bt-img-link::after { content: '⚔'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,10,18,0.78); color: var(--bt-gold); font-size: 22px; opacity: 0; transition: opacity 0.16s; }
       .bt-img-link:hover::after { opacity: 1; }
       .bt-img-link:hover .bt-boss-img { filter: brightness(0.5); }
       .bt-boss-img { transition: filter 0.16s; }
-      .bt-boss-info { flex: 1; min-width: 0; }
-      .bt-boss-name { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 13px; color: var(--bt-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; letter-spacing: 0.02em; }
+      .bt-boss-info { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+      .bt-boss-text-group { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+      .bt-boss-name { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 13px; color: var(--bt-text);  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; letter-spacing: 0.02em; }
       .bt-boss-cycle { font-size: 11px; color: var(--bt-muted); margin-top: 3px; font-weight: 300; }
-      .bt-dmg-chip { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; background: rgba(180,60,60,0.13); border: 1px solid rgba(220,80,80,0.28); color: #e07070; font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 11px; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+      .bt-dmg-chip { display: inline-flex; align-items: center; gap: 4px;  background: rgba(180,60,60,0.13); border: 1px solid rgba(220,80,80,0.28); color: #e07070; font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 11px; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
       .bt-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
       .bt-badge-alive { display: inline-flex; align-items: center; gap: 4px; background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.35); color: var(--bt-alive); font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; }
-      .bt-badge-alive::before { content: ''; width: 6px; height: 6px; background: var(--bt-alive); border-radius: 50%; animation: bt-pulse-green 1.8s ease-in-out infinite; }
       .bt-countdown { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 14px; color: var(--bt-waiting); letter-spacing: 0.04em; text-align: right; }
       .bt-countdown-label { font-size: 10px; color: var(--bt-muted); font-weight: 300; text-align: right; letter-spacing: 0.06em; text-transform: uppercase; }
-      #bt-footer { display: flex; align-items: center; justify-content: space-between; padding: 7px 18px; border-top: 1px solid var(--bt-border); background: #0d0d14; }
+      #bt-footer { display: flex; align-items: center; justify-content: space-between; padding: 7px 18px; border-top: 1px solid var(--bt-border); }
       #bt-last-updated { font-size: 11px; color: var(--bt-muted); font-weight: 300; }
       #bt-refresh-btn { background: transparent; border: 1px solid var(--bt-border-hi); color: var(--bt-muted); border-radius: 6px; padding: 3px 12px; font-size: 11px; font-family: 'Exo 2', sans-serif; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; }
       #bt-refresh-btn:hover { color: var(--bt-gold); border-color: var(--bt-gold-dim); background: var(--bt-gold-glow); }
@@ -11864,7 +11862,22 @@ function fixMonsterLayout() {
       const statusHtml = boss.alive ? `<div class="bt-card-right"><span class="bt-badge-alive">Alive</span></div>` : `<div class="bt-card-right"><span class="bt-countdown" data-ts="${boss.nextTs}">…</span><span class="bt-countdown-label">Spawns in</span></div>`;
       const dmgHtml = boss.userDmg > 0 ? `<span class="bt-dmg-chip">🩸 ${fmtDmg(boss.userDmg)}</span>` : '';
       const phaseHtml = boss.isPhaseBoss && boss.alive && boss.phase ? `<span class="bt-phase-badge bt-${boss.phase}">${boss.phase === 'p1' ? '● Phase 1' : boss.phase === 'p2' ? '⚔ Phase 2 — Duel' : '✦ Phase 3 — Ascended'}</span>` : '';
-      return `<div class="bt-card ${stateClass}" data-bt-key="${boss.name.replace(/"/g, '&quot;')}" style="animation-delay:${i * 0.06}s"><div class="bt-card-inner">${imgTag}<div class="bt-boss-info"><div class="bt-boss-name" title="${boss.name}">${boss.name}</div><div class="bt-boss-cycle">${boss.sub.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')}</div>${phaseHtml}${dmgHtml}</div>${statusHtml}</div></div>`;
+      return `
+        <div class="bt-card ${stateClass}" data-bt-key="${boss.name.replace(/"/g, '&quot;')}" style="animation-delay:${i * 0.06}s">
+          <div class="bt-card-inner">
+            ${imgTag}
+            <div class="bt-boss-info">
+              <div class="bt-boss-text-group">
+                <div class="bt-boss-name" title="${boss.name}">${boss.name}</div>
+                <div class="bt-boss-cycle">${boss.sub.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')}</div>
+                ${phaseHtml}
+              </div>
+              ${dmgHtml}
+            </div>
+            ${statusHtml}
+          </div>
+        </div>
+      `;
     }
 
     function patchCard(cardEl, boss) {
@@ -11876,10 +11889,15 @@ function fixMonsterLayout() {
 
       const infoEl = cardEl.querySelector('.bt-boss-info');
       if (infoEl) {
+        const textGroupEl = infoEl.querySelector('.bt-boss-text-group');
         let pBadge = infoEl.querySelector('.bt-phase-badge');
         if (boss.isPhaseBoss && nowAlive && boss.phase) {
           const label = boss.phase === 'p1' ? '● Phase 1' : boss.phase === 'p2' ? '⚔ Phase 2 — Duel' : '✦ Phase 3 — Ascended';
-          if (!pBadge) { pBadge = document.createElement('span'); pBadge.className = `bt-phase-badge bt-${boss.phase}`; const cycleEl = infoEl.querySelector('.bt-boss-cycle'); if (cycleEl) cycleEl.insertAdjacentElement('afterend', pBadge); else infoEl.prepend(pBadge); }
+          if (!pBadge) { 
+            pBadge = document.createElement('span'); 
+            pBadge.className = `bt-phase-badge bt-${boss.phase}`; 
+            if (textGroupEl) textGroupEl.appendChild(pBadge); // Appends to the bottom of text group
+          }
           pBadge.className = `bt-phase-badge bt-${boss.phase}`; pBadge.textContent = label;
         } else if (pBadge) { pBadge.remove(); }
       }
@@ -12073,6 +12091,8 @@ function fixMonsterLayout() {
   async function initDashboardTools() {
     console.log("Initializing dashboard tools");
     removeDashboardClutter();
+    updateEventPanelsDashboard();
+    updatePanelsDashboard();
 
     const BossTracker = getBossTracker();
     await BossTracker.init();
@@ -12116,6 +12136,16 @@ function fixMonsterLayout() {
       howtoInfo.remove();
     }
 
+    const heroHeader = document.querySelector('.hero-header');
+    if (heroHeader) {
+      heroHeader.remove();
+    }
+
+    const gameHeader = document.querySelector('.header');
+    if (gameHeader) {
+      gameHeader.remove();
+    }
+
     // Remove password reset message
     const h3Elements = document.querySelectorAll('h3');
     h3Elements.forEach(h3 => {
@@ -12123,6 +12153,222 @@ function fixMonsterLayout() {
         h3.remove();
       }
     });
+  }
+
+  function updateEventPanelsDashboard() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .hero-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+            gap: 12px !important;
+            padding: 12px !important;
+        }
+        .mini-addon-card {
+            position: relative;
+            display: block;
+            width: 100%;
+            height: 110px; /* Adjust height here to make them even smaller/bigger */
+            border-radius: 6px;
+            overflow: hidden;
+            text-decoration: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .mini-addon-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+        }
+        .mini-addon-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .mini-addon-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.2) 70%, transparent 100%);
+            display: flex;
+            align-items: flex-end;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .mini-addon-title {
+            color: #ffffff !important;
+            margin: 0 !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            font-family: sans-serif;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    `;
+    document.head.appendChild(style);
+
+    function transformCards() {
+        const grid = document.querySelector('.hero-grid');
+        if (!grid) return;
+
+        const oldCards = grid.querySelectorAll('.event-card');
+        if (oldCards.length === 0) return;
+
+        const fragment = document.createDocumentFragment();
+
+        oldCards.forEach(card => {
+            const href = card.getAttribute('href');
+            const ariaLabel = card.getAttribute('aria-label');
+            
+            const imgEl = card.querySelector('.event-media img');
+            const titleEl = card.querySelector('.event-title');
+
+            if (href && imgEl && titleEl) {
+                const imgSrc = imgEl.getAttribute('src');
+                const titleText = titleEl.textContent.trim();
+
+                const newCard = document.createElement('a');
+                newCard.className = 'mini-addon-card';
+                newCard.href = href;
+                newCard.setAttribute('aria-label', ariaLabel || titleText);
+                newCard.setAttribute('draggable', 'false');
+
+                const newImg = document.createElement('img');
+                newImg.className = 'mini-addon-bg';
+                newImg.src = imgSrc;
+                newImg.alt = titleText;
+
+                const overlay = document.createElement('div');
+                overlay.className = 'mini-addon-overlay';
+
+                const newTitle = document.createElement('h3');
+                newTitle.className = 'mini-addon-title';
+                newTitle.textContent = titleText;
+
+                // Assemble the new card
+                overlay.appendChild(newTitle);
+                newCard.appendChild(newImg);
+                newCard.appendChild(overlay);
+                
+                fragment.appendChild(newCard);
+            }
+        });
+
+        grid.innerHTML = '';
+        grid.appendChild(fragment);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', transformCards);
+    } else {
+        transformCards();
+    }
+  }
+
+  function updatePanelsDashboard() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .gates-flex {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important; /* Forces items into tiny responsive columns */
+            gap: 10px !important;
+            padding: 10px !important;
+            justify-content: center;
+        }
+        .gate-link {
+            text-decoration: none !important;
+            display: block !important;
+            width: 100% !important;
+        }
+        .mini-gate-card {
+            position: relative;
+            width: 100%;
+            height: 110px;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            background-color: #1a1f29; /* Fallback dark bg */
+        }
+        .mini-gate-card:hover {
+            transform: scale(1.04);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.6);
+        }
+        .mini-gate-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ensures image covers area without warping */
+            display: block;
+        }
+        .mini-gate-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+        .mini-gate-name {
+            color: #ffffff !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            text-align: center;
+            width: 100%;
+            font-family: sans-serif;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* Keeps long words like "Adventurer's Guild" from breaking layout */
+        }
+    `;
+    document.head.appendChild(style);
+
+    function transformGateCards() {
+        const flexContainer = document.querySelector('.gates-flex');
+        if (!flexContainer) return;
+
+        const gateLinks = flexContainer.querySelectorAll('a.gate-link');
+        
+        gateLinks.forEach(link => {
+            const innerCard = link.querySelector('.gate-card');
+            if (!innerCard) return;
+
+            const imgEl = innerCard.querySelector('img');
+            const nameEl = innerCard.querySelector('.gate-card-name');
+
+            if (imgEl && nameEl) {
+                const imgSrc = imgEl.getAttribute('src');
+                const nameText = nameEl.textContent.trim();
+                innerCard.className = 'mini-gate-card';
+                innerCard.innerHTML = '';
+
+                const newImg = document.createElement('img');
+                newImg.className = 'mini-gate-bg';
+                newImg.src = imgSrc;
+                newImg.alt = nameText;
+
+                const overlay = document.createElement('div');
+                overlay.className = 'mini-gate-overlay';
+
+                const newName = document.createElement('div');
+                newName.className = 'mini-gate-name';
+                newName.textContent = nameText;
+
+                overlay.appendChild(newName);
+                innerCard.appendChild(newImg);
+                innerCard.appendChild(overlay);
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', transformGateCards);
+    } else {
+        transformGateCards();
+    }
   }
 
   function initBattleLayoutSideBySide() {
