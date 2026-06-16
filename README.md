@@ -7,11 +7,25 @@
 ### Sidebar Navigation
 - **Real-time Stats Display**: Live attack, defense, stamina, and stat points
 - **Quick Stat Allocation**: +1/+5 buttons for instant stat upgrades
+- **Battlepass widget**: see quest progress from the sidebar
 
-### Boss trackers
-- **customizable through the config**
+### Dashboard
+- **Boss trackers**: Showing dmg done and phase
 
-### More options are availible and in progress
+### Waves
+- **mob filtering**: filtering and sorting of the mobs
+- **loot preview**: shows posible loot and highlights it when DMG requirment is reached
+
+### Collections / Achievements
+- **reordering**: reorders the collections/achievements based on if they are completed or not
+
+### Dungeon
+- **Battle page to wave match**: it matches the look of the dungeon battle page to the look of the wave and has the same features
+
+### Adventurers guild
+- **Banners removed**: removed extra banners from the page
+
+### More options in progress
 
 ## Instalation
 

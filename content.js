@@ -2769,10 +2769,6 @@ function parseAttackLogs(html) {
     // Apply color settings to CSS variables
     document.documentElement.style.setProperty('--monster-image-outline-color', extensionSettings.monsterImageOutlineColor);
     document.documentElement.style.setProperty('--loot-card-border-color', extensionSettings.lootCardBorderColor);
-      
-      // Apply background images
-      // Apply menu customization (hide/reorder side drawer items)
-      try { applyMenuCustomization(); } catch (e) { console.error('applyMenuCustomization error', e); }
   }
 
   // Function to update sidebar stats
@@ -2914,129 +2910,6 @@ function parseAttackLogs(html) {
       e.stopPropagation();
       window.location.href = `player.php?pid=${pid}`;
     });
-  }
-
-
-  // Apply menu customization to the actual side drawer DOM: hide or reorder items
-  function applyMenuCustomization() {
-    try {
-      const sideNavList =
-        document.querySelector('.side-nav-list') ||
-        document.querySelector('.side-nav');
-      if (!sideNavList) return;
-
-      // ensure we are working with a UL (create if missing)
-      let list = sideNavList;
-      if (list.tagName !== 'UL') {
-        const ul = document.createElement('ul');
-        ul.className = 'side-nav-list';
-
-        while (list.firstChild) {
-          ul.appendChild(list.firstChild);
-        }
-
-        list.replaceWith(ul);
-        list = ul;
-      }
-
-      // Helper mapping from menu id to a href snippet we can match against existing anchors
-      const idToHref = {
-        home: 'game_dash.php',
-        halloween_event: 'event_goblin_feast_of_shadows.php',
-        pvp: 'pvp.php',
-        inventory: 'inventory.php',
-        pets: 'pets.php',
-        stats: 'stats.php',
-        guild: 'guild_dash.php',
-        merchant: 'merchant.php',
-        blacksmith: 'blacksmith.php',
-        collections: 'collections.php',
-        achievements: 'achievements.php',
-        battle_pass: 'battle_pass.php',
-        legendary_forge: 'legendary_forge.php',
-        weekly_leaderboard: 'weekly.php',
-        guide: 'guide.php',
-        chat: 'chat.php'
-      };
-
-      const anchors = Array.from(sideNav.querySelectorAll('a.side-nav-item, .side-nav a'));
-      // Build a map from id -> element (if we can match), and also collect unmatched anchors
-      const matched = new Map();
-      const unmatched = new Set(anchors);
-
-      anchors.forEach(a => {
-        const href = a.getAttribute('href') || '';
-        const pathname = (() => {
-          try { return new URL(href, location.origin).pathname.replace(/^\//, ''); } catch (e) { return href; }
-        })();
-
-        // Try to match by known hrefs
-        for (const [id, snippet] of Object.entries(idToHref)) {
-          if (pathname.includes(snippet) || href.includes(snippet)) {
-            if (!matched.has(id)) {
-              matched.set(id, a);
-              unmatched.delete(a);
-            }
-            return;
-          }
-        }
-
-        // Also try to match by visible label text -> lowercased
-        const label = (a.querySelector('.side-label')?.textContent || a.textContent || '').trim().toLowerCase();
-        for (const mi of extensionSettings.menuItems || []) {
-          if (!matched.has(mi.id) && mi.name && label.includes(mi.name.toLowerCase())) {
-            matched.set(mi.id, a);
-            unmatched.delete(a);
-            return;
-          }
-        }
-      });
-
-      // Reorder: iterate extensionSettings.menuItems sorted by order
-      const sorted = [...(extensionSettings.menuItems || [])].sort((a,b) => (a.order||0)-(b.order||0));
-
-      // We'll insert anchors inside sideNav in the desired order.
-      // To avoid breaking existing structure, we operate on the sideNav element directly.
-      sorted.forEach(item => {
-        const el = matched.get(item.id);
-        if (el) {
-          if (!item.visible) {
-            // hide element but preserve it in DOM
-            el.style.display = 'none';
-            // also hide follow-up expandable panel if present
-            const next = el.parentElement && el.parentElement.nextElementSibling;
-            if (next && (next.classList.contains('stats-expand-panel') || next.classList.contains('battlepass-expand-panel') || next.classList.contains('battle-pass-section') || next.className.includes('expand-panel') || next.classList.contains('sidebar-submenu') || next.classList.contains('stats-expand-panel'))) {
-              next.style.display = 'none';
-            }
-          } else {
-            el.style.display = '';
-          }
-        } else {
-          // Not found in DOM. If visible and known href, create a simple anchor element and append.
-          if (item.visible && idToHref[item.id]) {
-            try {
-              const a = document.createElement('a');
-              a.className = 'side-nav-item';
-              a.setAttribute('href', idToHref[item.id]);
-              a.setAttribute('draggable', 'false');
-
-              const icon = document.createElement('span');
-              icon.className = 'side-icon';
-              icon.textContent = '•';
-
-              const lbl = document.createElement('span');
-              lbl.className = 'side-label';
-              lbl.textContent = item.name || item.id;
-
-              a.append(icon, lbl);
-              list.appendChild(a);
-            } catch (e) { /* ignore creation errors */ }
-          }
-        }
-      });
-    } catch (err) {
-      console.error('applyMenuCustomization failed', err);
-    }
   }
 
   // Fetch open gates from the dashboard (either from current DOM if on game_dash.php,
@@ -7069,9 +6942,6 @@ window.toggleSection = function(header) {
     }
   }
 
-  window.applyMenuCustomization = function() {
-    saveSettings();
-  };
 
   function closeSettingsModal() {
     const modal = document.getElementById('settings-modal');
