@@ -22,6 +22,9 @@
 ### Dungeon
 - **Battle page to wave match**: it matches the look of the dungeon battle page to the look of the wave and has the same features
 
+### Guild
+- **Page reorder**: reordered the page so the dungeons show up on the top
+
 ### Adventurers guild
 - **Banners removed**: removed extra banners from the page
 
