@@ -11600,17 +11600,39 @@ function fixMonsterLayout() {
   function initPvPBattleMods(){
   }
 
-  function getBossTracker() {
-    'use strict';
+  async function loadExtensionConfig() {
+    try {
+      const configUrl = chrome.runtime.getURL('config.json');
+      const response = await fetch(configUrl);
+      if (!response.ok) throw new Error(`HTTP error status: ${response.status}`);
+      
+      const data = await response.json();
+      console.log("[Config Loader] Successfully loaded configuration:", data);
+      return data;
+    } catch (error) {
+      console.error("[Config Loader] Failed to load config.json, using script defaults:", error);
+      return null;
+    }
+  }
 
-    // State populated dynamically from config.json
-    let CONFIG = {
-      BOSS_PAGES: [],
-      SPAWN_LEAD_MS: 10000,
-      MIN_REFRESH_MS: 30000,
-      FALLBACK_REFRESH_MS: 300000,
-      TICK_INTERVAL_MS: 1000
+  function getBossTracker(loadedConfig = null) {
+    const CONFIG = {
+      BOSS_PAGES: [
+        { "label": "Poseidon's Pantheon",  "url": "https://demonicscans.org/active_wave.php?gate=5&wave=9"  },
+        { "label": "Hermes's Pantheon",    "url": "https://demonicscans.org/active_wave.php?gate=5&wave=10" },
+        { "label": "Artemis's Pantheon",   "url": "https://demonicscans.org/active_wave.php?gate=5&wave=11" },
+        { "label": "Grakthar's Kingdom",   "url": "https://demonicscans.org/active_wave.php?gate=3&wave=8"  }
+      ],
+      BOSS_PHASE_ALIASES: {
+        "hermes divine herald of the endless road": ["hermes fleet duelist of the crossroads"],
+        "artemis divine huntress of the moonlit wilds": ["artemis lunar duelist of the sacred hunt"]
+      },
+      TICK_INTERVAL_MS: 1000,
+      MIN_REFRESH_MS: 300000,
+      SPAWN_LEAD_MS: 60000,
+      FALLBACK_REFRESH_MS: 1800000
     };
+    window.BOSS_PHASE_ALIASES = CONFIG.BOSS_PHASE_ALIASES;
 
     let _refreshTimer = null;
     let sections = [];
@@ -11741,7 +11763,7 @@ function fixMonsterLayout() {
 
     function normName(s) { return (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim(); }
 
-    const BOSS_PHASE_ALIASES = CONFIG.BOSS_PHASE_ALIASES || {};
+    const BOSS_PHASE_ALIASES = CONFIG.BOSS_PHASE_ALIASES;
 
     function parseBossCards(html) {
       const parser = new DOMParser();
@@ -11773,7 +11795,11 @@ function fixMonsterLayout() {
 
         if (alive) {
           const norm = normName(name);
-          const entry = monsterMap[norm];
+          let entry = monsterMap[norm];
+          if (!entry) {
+            const matchedKey = Object.keys(monsterMap).find(key => norm.includes(key) || key.includes(norm));
+            if (matchedKey) entry = monsterMap[matchedKey];
+          }
 
           if (entry) {
             battleUrl = `https://demonicscans.org/battle.php?id=${entry.id}`;
@@ -11818,6 +11844,28 @@ function fixMonsterLayout() {
             pvpUrl = `https://demonicscans.org/pvp_style_battle.php?source=monster_phase&active_id=${pvpMatch[1]}`;
           } else {
             phase = 'p3';
+            const norm = normName(name);
+            let entry = monsterMap[norm];
+            console.log(`Attempting to find phase boss entry for ${name} (norm: ${norm}) in monsterMap:`, Object.keys(monsterMap));
+            if (!entry) {
+              console.log(BOSS_PHASE_ALIASES);
+              const aliases = BOSS_PHASE_ALIASES[norm];
+              console.log(`No exact match found for ${name}. Checking aliases:`, aliases);
+              for (const alias of aliases) {
+                if (monsterMap[alias]) { 
+                  entry = monsterMap[alias]; 
+                  console.log(`-> Found exact configuration alias match: ${alias}`);
+                  break; 
+                }
+              }
+            }
+            
+            if (entry) {
+              battleUrl = `https://demonicscans.org/battle.php?id=${entry.id}`;
+              userDmg   = entry.dmg;
+            } else {
+              console.log(`-> Link routing failed for ${name}. Battle URL remains null.`);
+            }
           }
         }
 
@@ -11855,10 +11903,11 @@ function fixMonsterLayout() {
       if (boss.alive && boss.phase === 'p3') stateClass += ' bt-phase3';
       const imgUrl = boss.imgSrc ? (boss.imgSrc.startsWith('/') ? `https://demonicscans.org${boss.imgSrc}` : `https://demonicscans.org/${boss.imgSrc}`) : null;
       const imgEl = imgUrl ? `<img class="bt-boss-img" src="${imgUrl}" alt="">` : `<div class="bt-boss-img-placeholder">👾</div>`;
+      console.log(`Building card for ${boss.name}: alive=${boss.alive}, battleUrl=${boss.battleUrl}, imgUrl=${imgUrl}`);
       const imgTag = (boss.alive && boss.battleUrl) ? `<a class="bt-img-link" href="${boss.battleUrl}" title="Go to battle: ${boss.name}" target="_self">${imgEl}</a>` : imgEl;
       const statusHtml = boss.alive ? `<div class="bt-card-right"><span class="bt-badge-alive">Alive</span></div>` : `<div class="bt-card-right"><span class="bt-countdown" data-ts="${boss.nextTs}">…</span><span class="bt-countdown-label">Spawns in</span></div>`;
       const dmgHtml = boss.userDmg > 0 ? `<span class="bt-dmg-chip">🩸 ${fmtDmg(boss.userDmg)}</span>` : '';
-      const phaseHtml = boss.isPhaseBoss && boss.alive && boss.phase ? `<span class="bt-phase-badge bt-${boss.phase}">${boss.phase === 'p1' ? '● Phase 1' : boss.phase === 'p2' ? '⚔ Phase 2 — Duel' : '✦ Phase 3 — Ascended'}</span>` : '';
+      const phaseHtml = boss.isPhaseBoss && boss.alive && boss.phase ? `<span class="bt-phase-badge bt-${boss.phase}">${boss.phase === 'p1' ? 'Phase 1' : boss.phase === 'p2' ? 'Phase 2' : 'Phase 3'}</span>` : '';
       return `
         <div class="bt-card ${stateClass}" data-bt-key="${boss.name.replace(/"/g, '&quot;')}" style="animation-delay:${i * 0.06}s">
           <div class="bt-card-inner">
@@ -11889,11 +11938,11 @@ function fixMonsterLayout() {
         const textGroupEl = infoEl.querySelector('.bt-boss-text-group');
         let pBadge = infoEl.querySelector('.bt-phase-badge');
         if (boss.isPhaseBoss && nowAlive && boss.phase) {
-          const label = boss.phase === 'p1' ? '● Phase 1' : boss.phase === 'p2' ? '⚔ Phase 2 — Duel' : '✦ Phase 3 — Ascended';
+          const label = boss.phase === 'p1' ? 'Phase 1' : boss.phase === 'p2' ? 'Phase 2' : 'Phase 3';
           if (!pBadge) { 
             pBadge = document.createElement('span'); 
             pBadge.className = `bt-phase-badge bt-${boss.phase}`; 
-            if (textGroupEl) textGroupEl.appendChild(pBadge); // Appends to the bottom of text group
+            if (textGroupEl) textGroupEl.appendChild(pBadge); 
           }
           pBadge.className = `bt-phase-badge bt-${boss.phase}`; pBadge.textContent = label;
         } else if (pBadge) { pBadge.remove(); }
@@ -11901,10 +11950,20 @@ function fixMonsterLayout() {
 
       const linkEl = cardEl.querySelector('.bt-img-link');
       const imgEl  = cardEl.querySelector('.bt-boss-img, .bt-boss-img-placeholder');
-      if (nowAlive && boss.battleUrl) {
-        if (!linkEl && imgEl) { const a = document.createElement('a'); a.className = 'bt-img-link'; a.href = boss.battleUrl; a.title = `Go to battle: ${boss.name}`; a.target = '_self'; imgEl.parentNode.insertBefore(a, imgEl); a.appendChild(imgEl); } 
+
+      if (nowAlive) {
+        if (!linkEl && imgEl) { 
+          const a = document.createElement('a'); 
+          a.className = 'bt-img-link'; 
+          a.href = boss.battleUrl; 
+          a.title = `Go to battle: ${boss.name}`; 
+          a.target = '_self'; 
+          imgEl.parentNode.insertBefore(a, imgEl); 
+          a.appendChild(imgEl); 
+        } 
         else if (linkEl) { linkEl.href = boss.battleUrl; }
       } else {
+        console.log(`Removing link for ${boss.name} because it's not alive or no battle URL.`);
         if (linkEl && imgEl) { linkEl.parentNode.insertBefore(imgEl, linkEl); linkEl.remove(); }
       }
 
