@@ -169,6 +169,7 @@
     '/achievements.php': initAchievementsMods,
     '/weekly.php': initLeaderboardMods,
     '/battle_pass.php': initBattlePassMods,
+    '/guild_dash.php': initGuildMods,
     '/guild_dungeon.php': initDungeonLocationMods, // New dungeon handler
     '/guild_dungeon_location.php': initDungeonLocationMods, // New dungeon location handler
     '/adventurers_guild.php': initAdventurersGuildMods,
@@ -12611,9 +12612,141 @@ function fixMonsterLayout() {
     }
   }
 
-  // NEW: Define initDungeonLocationMods to fix the ReferenceError
   function initDungeonLocationMods() {
     initDungeonPageTransformation();
+  }
+
+  function initGuildMods() {
+    reorderGuildPage();
+  }
+
+  function reorderGuildPage() {
+    const wrap = document.querySelector('.wrap');
+    if (!wrap) return;
+    const bannerPanel = wrap.querySelector('.panel img[src*="/guilds/banners/"]')?.closest('.panel');
+
+    if (bannerPanel) {
+        const bannerImg = bannerPanel.querySelector('img');
+
+        const wrapParent = wrap.parentElement;
+        wrapParent.insertAdjacentHTML(
+            'afterbegin',
+            `<div class="guild-banner-bg"></div>`
+        );
+
+        const bg = wrapParent.querySelector('.guild-banner-bg');
+        bg.style.backgroundImage = `url('${bannerImg.src}')`;
+        bannerPanel.remove();
+    }
+    document.querySelectorAll('.panel').forEach(panel => {
+        const title = panel.querySelector('h2');
+        if (title && title.textContent.trim() === 'Recent Chat') {
+            panel.remove();
+        }
+    });
+    let dungeonPanel = null;
+
+    document.querySelectorAll('.panel').forEach(panel => {
+        const title = panel.querySelector('h2');
+        if (title && title.textContent.trim() === 'Open Dungeons') {
+            dungeonPanel = panel;
+        }
+    });
+
+    const announcementPanel = [...document.querySelectorAll('.panel')]
+        .find(p => p.textContent.includes('Guild Announcement'));
+
+    if (dungeonPanel && announcementPanel) {
+        announcementPanel.insertAdjacentElement('afterend', dungeonPanel);
+        dungeonPanel.style.flex = 'unset';
+        dungeonPanel.style.maxWidth = 'none';
+    }
+    const guildHeader = [...document.querySelectorAll('.panel')]
+    .find(p => p.querySelector('h1.title'));
+
+    if (guildHeader) {
+      guildHeader.querySelector('img')?.remove();
+      guildHeader.querySelector('a[href*="guild_chat"]')?.remove();
+      const leaveForm = guildHeader.querySelector('form');
+      const actionPanel = document.createElement('div');
+      actionPanel.className = 'panel guild-actions';
+      const membersBtn = guildHeader.querySelector('a[href*="guild_members"]');
+      if (membersBtn) {
+          actionPanel.appendChild(membersBtn.cloneNode(true));
+      }
+      if (leaveForm) {
+          actionPanel.appendChild(leaveForm.cloneNode(true));
+      }
+      document.querySelector('.wrap').appendChild(actionPanel);
+      membersBtn?.parentElement?.remove();
+    }
+    const style = document.createElement('style');
+    style.textContent = `
+        .guild-hero {position: relative;height: 420px;margin: -20px -20px 20px;overflow: hidden;
+        }
+        .guild-hero-bg {position: absolute;inset: 0;background-size: cover;background-position: center;
+        }
+        .guild-hero::after {content: "";position: absolute;inset: 0;background:linear-gradient(to bottom,rgba(0,0,0,0.15) 0%,rgba(0,0,0,0.45) 50%,#0f1117 100%);
+        }
+        .panel h2.title {position: relative;z-index: 2;
+        }
+        .panel:has(> h2.title) .row {flex-wrap: nowrap;
+        }
+        h2.title {scroll-margin-top: 100px;
+        }
+        .guild-banner-bg{position:absolute;top:0;left:0;right:0;height:500px;background-size:cover;background-position:center;z-index:-1;mask-image: linear-gradient(to bottom, black 60%, transparent 100%);-webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+        }
+        .guild-header {background: transparent !important;border: none !important;box-shadow: none !important;margin-top: -250px;position: relative;z-index: 5;
+        }
+        .guild-header h1 {font-size: 42px;text-shadow: 0 3px 10px rgba(0,0,0,.8);
+        }
+        .guild-header .muted {font-size: 16px;color: rgba(255,255,255,.9);
+        }
+        .guild-actions {display:flex;justify-content:center;gap:12px;
+        }
+        .panel:has(h2.title) .row {
+            gap: 10px !important;
+        }
+        .panel:has(h2.title) .row > div {
+            padding: 8px !important;
+            border-radius: 10px !important;
+            background: #171923 !important;
+            border: 1px solid #2B2D44 !important;
+            flex: 1 1 0% !important;
+            min-width: 0 !important;
+            max-width: 32% !important;
+        }
+        .panel:has(h2.title) .row > div img {
+            width: 100% !important;
+            height: 110px !important;
+            aspect-ratio: auto !important; /* kills inline 1/1 behavior */
+            object-fit: cover !important;
+            border-radius: 8px !important;
+        }
+        .panel:has(h2.title) .row > div > div:nth-of-type(2) {
+            font-size: 13px !important;
+            margin-top: 6px !important;
+            font-weight: 700;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Specific dungeon layout
+    if (dungeonPanel) {
+        const dungeonRow = dungeonPanel.querySelector('.row');
+
+        if (dungeonRow) {
+            dungeonRow.style.display = 'flex';
+            dungeonRow.style.flexWrap = 'nowrap';
+            dungeonRow.style.gap = '16px';
+
+            [...dungeonRow.children].forEach(card => {
+                card.style.flex = '1';
+                card.style.maxWidth = 'none';
+                card.style.minWidth = '0';
+            });
+        }
+    }
   }
 
   function getInventoryItemQuantity(itemName) {
