@@ -15,7 +15,12 @@
 
 ## Instalation
 
-- Go to the [latest release](https://github.com/DBerkey/new-ui-addon/releases) and install it through un zipping it and loading it in to your browser
+- Go to the [latest release](https://github.com/DBerkey/new-ui-addon/releases) and download the latest versions zip and unzip it
+- In your chromium browser go to `chrome://extensions`
+- Enable Developer mode
+- Click Load unpacked and select the unzipped folder
+- The [veyra game](https://demonicscans.org/game_dash.php) should now include the addon features   
+- ###### _this game is only accesible by having an account_
 
 ## AI usage
 For this project GitHub copilot was used for in line code sugestions and for the generation of documentation
