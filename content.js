@@ -11192,8 +11192,7 @@ function fixMonsterLayout() {
     initContinueDamageTracking();
     initMonsterLootPreview(); 
     initMonsterSorting();      
-    loadInstaLoot();             
-    initContinueBattleModal();   
+    loadInstaLoot();
     // Pre-index cards during idle time so first filter is instant
     const idle = window.requestIdleCallback || function(fn){ return setTimeout(fn, 120); };
     idle(() => {
