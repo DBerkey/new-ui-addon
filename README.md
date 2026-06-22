@@ -8,6 +8,7 @@
 - **Real-time Stats Display**: Live attack, defense, stamina, and stat points
 - **Quick Stat Allocation**: +1/+5 buttons for instant stat upgrades
 - **Battlepass widget**: see quest progress from the sidebar
+- **Acount dropdown**: saves the info of loged in acounts and makes it quick swappable
 
 ### Dashboard
 - **Boss trackers**: Showing dmg done and phase
