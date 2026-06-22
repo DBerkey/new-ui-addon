@@ -2884,6 +2884,87 @@ function parseAttackLogs(html) {
     }
   }
 
+  const ACCOUNT_STORAGE_KEY = 'demonAccounts';
+
+  function getCookie(name) {
+      return document.cookie
+          .split('; ')
+          .find(c => c.startsWith(name + '='))
+          ?.split('=')[1];
+  }
+
+  function setCookie(name, value) {
+      document.cookie = `${name}=${value}; path=/`;
+  }
+
+  function getAccounts() {
+      return JSON.parse(
+          localStorage.getItem(ACCOUNT_STORAGE_KEY) || '{}'
+      );
+  }
+
+  function saveAccounts(accounts) {
+      localStorage.setItem(
+          ACCOUNT_STORAGE_KEY,
+          JSON.stringify(accounts)
+      );
+  }
+
+  async function syncCurrentAccount() {
+    const pid = getCookie('demon');
+    const demontemp = getCookie('demontemp');
+
+    if (!pid || !demontemp) return;
+
+    const accounts = getAccounts();
+
+    const existing = accounts[pid];
+
+    if (!existing || existing.demontemp !== demontemp) {
+        const html = await fetch(`/player.php?pid=${pid}`)
+            .then(r => r.text());
+
+        const doc = new DOMParser()
+            .parseFromString(html, 'text/html');
+
+        accounts[pid] = {
+            pid,
+            demontemp,
+            name:
+                doc.querySelector('.small-name')?.textContent.trim() ||
+                doc.querySelector('.head h1')?.textContent.trim() ||
+                `Player ${pid}`,
+            avatar:
+                doc.querySelector('.small-ava img')?.src ||
+                doc.querySelector('.avatar img')?.src ||
+                ''
+        };
+
+        saveAccounts(accounts);
+
+        buildAccountDropdown();
+    }
+  }
+
+  let lastPid = null;
+  let lastTemp = null;
+
+  async function monitorAccountChanges() {
+    const pid = getCookie('demon');
+    const temp = getCookie('demontemp');
+
+    if (
+        pid !== lastPid ||
+        temp !== lastTemp
+    ) {
+        lastPid = pid;
+        lastTemp = temp;
+
+        await syncCurrentAccount();
+    }
+  }
+  setInterval(monitorAccountChanges, 5000);
+
   async function getProfileLink() {
     const profileHeader = document.querySelector('.small-user');
     if (!profileHeader) {
@@ -3148,8 +3229,237 @@ function parseAttackLogs(html) {
       if (sideHeaderTitle) {
         sideHeaderTitle.parentNode.removeChild(sideHeaderTitle);
       }
-    }
+      const accounts = getAccounts();
+      const currentPid = getCookie('demon');
 
+      const oldSelect = document.getElementById('account-switcher');
+      if (oldSelect) oldSelect.remove();
+      const oldCustomDropdown = document.getElementById('custom-account-dropdown');
+      if (oldCustomDropdown) oldCustomDropdown.remove();
+
+      if (!document.getElementById('dropdown-styles')) {
+        const style = document.createElement('style');
+        style.id = 'dropdown-styles';
+        style.textContent = `
+          .small-user {
+            position: relative;
+            padding-right: 35px !important; /* Space for the arrow */
+          }
+          .profile-arrow-down {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: solid currentColor;
+            border-width: 0 2px 2px 0;
+            display: inline-block;
+            padding: 4px;
+            transform: translateY(-70%) rotate(45deg);
+            transition: transform 0.2s ease;
+            pointer-events: none; /* Let click pass to card wrapper */
+          }
+          .dropdown-open .profile-arrow-down {
+            transform: translateY(-30%) rotate(-135deg);
+          }
+          .custom-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1e1e2e; /* Match your sidebar color/theme */
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 9999;
+            margin-top: 5px;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+          }
+          .custom-dropdown-menu.show {
+            display: block;
+          }
+          .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            color: #cdd6f4;
+          }
+          .dropdown-item:hover {
+            background: rgba(137,180,250,0.15);
+          }
+          .dropdown-item.active {
+            background: rgba(137,180,250,0.25);
+            font-weight: bold;
+          }
+          .dropdown-item img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #313244;
+          }
+          .dropdown-item-name {
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .side-head {
+            margin-top: 20px;
+            }
+        `;
+        document.head.appendChild(style);
+      }
+
+sideHeader.style.position = 'relative';
+
+      // 1. Target the original structures
+      const originalAnchor = sideHeader.querySelector('a[href^="player.php"]');
+      const profileCard = sideHeader.querySelector('.small-user');
+
+      if (originalAnchor && profileCard) {
+        // Find the elements inside the *original* profileCard before it gets manipulated
+        const smallAva = profileCard.querySelector('.small-ava');
+        const smallUserMeta = profileCard.querySelector('.small-user-meta');
+
+        // 2. Completely remove the original anchor link from the DOM
+        originalAnchor.remove();
+
+        // 3. Create the brand new custom parent container wrapper
+        const splitCard = document.createElement('div');
+        splitCard.className = 'custom-user-card-container'; 
+        splitCard.style.display = 'flex';
+        splitCard.style.alignItems = 'center';
+        splitCard.style.background = 'rgba(255, 255, 255, 0.02)';
+        splitCard.style.borderRadius = '8px';
+        splitCard.style.padding = '0'; 
+        splitCard.style.cursor = 'default';
+        splitCard.style.background = '#1a1b25';
+        splitCard.style.border = '1px solid #2b2d44';
+        splitCard.style.boxShadow = '0 4px 12px rgba(0, 0, 0, .4)';
+
+        // 4. Rebuild Left Info Block cleanly (Appends each item exactly ONCE)
+        const leftInfo = document.createElement('div');
+        leftInfo.className = 'profile-left-info-block';
+        leftInfo.style.display = 'flex';
+        leftInfo.style.alignItems = 'center';
+        leftInfo.style.flex = '1';
+        leftInfo.style.padding = '8px';
+        leftInfo.style.cursor = 'pointer';
+        leftInfo.style.transition = 'transform 0.2s ease, background 0.2s ease';
+
+        // Fix: Clone only if they exist, and clear any accidental internal repetition
+        leftInfo.innerHTML = ''; 
+        if (smallAva) leftInfo.appendChild(smallAva.cloneNode(true));
+        if (smallUserMeta) leftInfo.appendChild(smallUserMeta.cloneNode(true));
+
+        // Hover animations
+        leftInfo.addEventListener('mouseenter', () => {
+          leftInfo.style.transform = 'scale(1.02)';
+          leftInfo.style.background = 'rgba(137,180,250,0.05)';
+        });
+        leftInfo.addEventListener('mouseleave', () => {
+          leftInfo.style.transform = 'scale(1)';
+          leftInfo.style.background = '';
+        });
+
+        // Click routing
+        leftInfo.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const pid = getCookie('demon');
+          if (pid) {
+            window.location.href = `player.php?pid=${pid}`;
+          }
+        });
+
+        // 5. Rebuild Right Side Arrow Trigger
+        const arrowButton = document.createElement('div');
+        arrowButton.className = 'profile-arrow-trigger';
+        arrowButton.style.display = 'flex';
+        arrowButton.style.alignItems = 'center';
+        arrowButton.style.justifyContent = 'center';
+        arrowButton.style.width = '36px';
+        arrowButton.style.alignSelf = 'stretch';
+        arrowButton.style.cursor = 'pointer';
+        arrowButton.style.borderLeft = '1px solid rgba(255,255,255,0.08)';
+
+        const arrow = document.createElement('span');
+        arrow.className = 'profile-arrow-down';
+        arrow.style.border = 'solid currentColor';
+        arrow.style.borderWidth = '0 2px 2px 0';
+        arrow.style.display = 'inline-block';
+        arrow.style.padding = '3px';
+        arrow.style.transform = 'rotate(45deg)';
+        arrow.style.transition = 'transform 0.2s';
+        
+        arrowButton.appendChild(arrow);
+
+        // Assemble pieces
+        splitCard.appendChild(leftInfo);
+        splitCard.appendChild(arrowButton);
+        sideHeader.insertBefore(splitCard, sideHeader.firstChild);
+
+        // 6. Refresh the Dropdown Menu
+        const oldMenu = document.getElementById('custom-account-dropdown');
+        if (oldMenu) oldMenu.remove();
+
+        const dropdownMenu = document.createElement('div');
+        dropdownMenu.id = 'custom-account-dropdown';
+        dropdownMenu.className = 'custom-dropdown-menu';
+
+        Object.values(accounts).forEach(acc => {
+          const item = document.createElement('div');
+          item.className = 'dropdown-item';
+          if (acc.pid === currentPid) item.classList.add('active');
+
+          const img = document.createElement('img');
+          img.src = acc.avatar || 'uploads/avatars/default.png';
+          img.alt = '';
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'dropdown-item-name';
+          nameSpan.textContent = acc.name;
+
+          item.appendChild(img);
+          item.appendChild(nameSpan);
+
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setCookie('demon', acc.pid);
+            setCookie('demontemp', acc.demontemp);
+            location.reload();
+          });
+
+          dropdownMenu.appendChild(item);
+        });
+
+        sideHeader.appendChild(dropdownMenu);
+
+        // Toggle action
+        arrowButton.addEventListener('click', (e) => {
+          e.preventDefault(); 
+          e.stopPropagation();
+
+          const isOpen = dropdownMenu.classList.contains('show');
+          dropdownMenu.classList.toggle('show', !isOpen);
+          arrowButton.classList.toggle('dropdown-open', !isOpen);
+          
+          arrow.style.transform = !isOpen ? 'rotate(-135deg) translateY(-2px)' : 'rotate(45deg)';
+        });
+
+        document.addEventListener('click', () => {
+          dropdownMenu.classList.remove('show');
+          arrowButton.classList.remove('dropdown-open');
+          arrow.style.transform = 'rotate(45deg)';
+        });
+      }
+    }
+    
     // Inject EXP potion into battle drawer (if both exist)
     injectExpPotionIntoBattleDrawer();
     console.log('Battle drawer updated');
@@ -4715,7 +5025,7 @@ function parseAttackLogs(html) {
         margin-left: 0 !important;
         position: fixed !important;
         top: 0 !important;
-        z-index: 10000 !important;
+        z-index: 11000 !important;
       }
 
       .settings-section {
